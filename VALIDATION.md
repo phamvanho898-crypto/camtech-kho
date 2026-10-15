@@ -1,6 +1,6 @@
 # Kiểm tra triển khai CAMTECH — 15/10/2026
 
-- 26 bài kiểm tra JavaScript đạt (11 nghiệp vụ, 6 hiển thị/bộ lọc, 9 phiếu xuất). Phần nghiệp vụ gồm: W/WT, nhập/xuất, giữ/hủy/giao, chặn tồn âm và phiên bản cũ.
+- 35 bài kiểm tra JavaScript đạt (11 nghiệp vụ, 6 hiển thị/bộ lọc, 9 phiếu xuất, 9 báo cáo). Phần nghiệp vụ gồm: W/WT, nhập/xuất, giữ/hủy/giao, chặn tồn âm và phiên bản cũ.
 - 16 kiểm tra trực tiếp trên PostgreSQL/Supabase đạt, bằng vai trò `authenticated` và ngữ cảnh người dùng thử: đọc/lưu, đọc lại sau ghi, chống ghi trùng, từ chối phiên bản cũ, chặn xuất vượt tồn, chặn ghi trực tiếp, RLS với chủ kho khác, từ chối thiếu danh tính, giữ/giao đơn, chống giao trùng và bảo toàn lịch sử.
 - Mọi thay đổi của kiểm tra cơ sở dữ liệu được rollback; đã đối chiếu lại trạng thái sau kiểm tra.
 - Public RPC dùng `SECURITY INVOKER`; các hàm đặc quyền có kiểm tra `auth.uid()` nằm trong schema riêng, không đưa ra Data API. Không có secret/service_role key trong mã nguồn.
@@ -20,3 +20,9 @@ Chữ nội dung chính 15–16 px, mã hàng 17–19 px, số tồn 23–26 px.
 Mẫu xem trước và CSS in A4 được tạo từ giao dịch xuất đã lưu, gồm xuất trực tiếp và giao từ đơn. Có nút in sau khi lưu, trong lịch sử và trên đơn đã giao. In lại chỉ đọc dữ liệu, không tạo giao dịch hoặc ghi cơ sở dữ liệu. Số phiếu suy ra ổn định từ ngày và mã giao dịch; V1 không cấp số tăng dần. Tổng số lượng tách theo từng đơn vị.
 
 9 kiểm tra đạt: mã/màu W/WT và lượng xuất, số phiếu ổn định, từ chối giao dịch chưa lưu/phiếu nhập, tham chiếu đơn đã giao, không đổi tồn khi xem/in lại, đơn vị và số thập phân, thoát HTML/bản thử, ngày/số lượng/mã hàng sai, đủ hàng hóa ở phiếu nhiều dòng. Đã kiểm tra cấu trúc vùng in riêng và quy tắc A4/ngắt trang. Chưa kiểm tra hộp thoại in/PDF và phân trang thực tế trên trình duyệt vì không có công cụ điều khiển trình duyệt được hỗ trợ.
+
+## Báo cáo tồn kho trong ứng dụng
+
+9 kiểm tra mới đạt: chỉ giữ hàng từ đơn `reserved`, bỏ qua phiếu đã hoàn; phân biệt hết thực tế/hết khả dụng; biên 0/2/2.001 và số lẻ; kết hợp tìm không dấu/kích cỡ/loại báo cáo; W/WT; tổng theo từng đơn vị và danh sách lọc; tên file theo giờ Việt Nam/bản thử; thoát HTML và giữ con trỏ khi đồng bộ; chặn xuất khi chưa tải hoặc còn phiếu chưa xác nhận; đọc `stock_load` trước khi xuất và không tải bản cũ khi lỗi mạng. Các kiểm tra không ghi dữ liệu kho thật.
+
+Đã tạo và đọc lại XLSX bằng chính bản ExcelJS 4.4.0 dùng trên trình duyệt: số nguyên/số lẻ đúng kiểu số, chuỗi bắt đầu bằng dấu `=` giữ kiểu văn bản, W/WT riêng, tổng Cuộn/Mét riêng, bộ lọc bảng và cố định 8 hàng đầu giữ được. ExcelJS tải theo yêu cầu, pin phiên bản và SRI; lỗi tải có thông báo và cho thử lại. Chưa mở file bằng ứng dụng Microsoft Excel/iPhone thực tế.

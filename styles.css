@@ -297,6 +297,45 @@ dialog::backdrop { background:#0d203b80; }
   dialog { padding:23px 19px; }
 }
 
+/* Inventory reports share the same readable quantities and mobile cards. */
+.report-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:24px; }
+.report-card { text-align:left; padding:20px; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); min-width:0; }
+.report-card>span:first-child { font-size:16px; font-weight:700; }
+.report-card>b { display:block; font-size:36px; line-height:1.2; margin:12px 0 9px; font-variant-numeric:tabular-nums; }
+.report-card small { font-size:15px; font-weight:500; }
+.report-card .report-card-hint { display:block; color:var(--muted); font-size:13px; line-height:1.6; }
+.report-card.active { background:#e9f5ef; border:2px solid var(--green); padding:19px; }
+.report-card.report-zero.active { background:#fff0f1; border-color:var(--red); }
+.report-card.report-low.active { background:#fff5e1; border-color:var(--amber); }
+.report-card:hover { box-shadow:0 2px 12px #25364915; }
+.report-rule { padding:16px 22px; color:#42566b; font-size:14px; background:#f3f7fb; border-bottom:1px solid var(--line); }
+.report-help { margin-top:16px; color:var(--muted); font-size:14px; }
+.report-table thead th:first-child { width:25%; }
+.report-table thead th:nth-child(2) { width:19%; }
+.report-table thead .num { width:12%; }
+.report-table thead th:last-child { width:20%; }
+.report-table .report-status { text-align:center; }
+@media(min-width:721px) { .report-table { min-width:960px; } }
+@media(max-width:720px) {
+ .report-summary { gap:9px; }
+ .report-card { padding:14px 11px; }
+ .report-card.active { padding:13px 10px; }
+ .report-card>span:first-child { font-size:14px; }
+ .report-card>b { font-size:30px; }
+ .report-card .report-card-hint { font-size:12px; }
+ .report-panel .stock-panel-heading .btn { width:100%; }
+ .report-rule { padding:15px 16px; }
+ .report-table .report-status { grid-column:1/-1; padding-top:10px; border-top:1px solid var(--line); text-align:left; }
+}
+@media(max-width:480px) {
+ .report-summary { grid-template-columns:1fr; gap:8px; }
+ .report-card { display:grid; grid-template-columns:1fr auto; gap:5px 12px; align-items:center; padding:13px 15px; }
+ .report-card.active { padding:12px 14px; }
+ .report-card>b { grid-row:1/3; grid-column:2; margin:0; font-size:29px; white-space:nowrap; }
+ .report-card .report-card-hint { grid-column:1; }
+ nav button { font-size:11px; }
+}
+
 /* Saved outgoing slips: preview and A4 printing. */
 .history-slip { display:flex; align-items:center; flex-wrap:wrap; gap:10px 14px; margin-top:12px; }
 .history-slip>span { font-size:12px; color:#42566b; overflow-wrap:anywhere; }

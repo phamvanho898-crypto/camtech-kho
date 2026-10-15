@@ -11,6 +11,7 @@ const bundledConfig=window.KHO_CONFIG||{},hasBundledConfig=Boolean(bundledConfig
 let cfg=hasBundledConfig?{...bundledConfig}:read('kho.connection.v1',{}),session=null,state=C.blank(),revision=0,demo=false,tab='stock',busy=false,search='',filter='all',sizeFilter='all',refreshing=null,confirmFn=null,pending=null;
 const sessionKey=()=>`kho.session:${cfg.url}`;
 const pendingKey=()=>`kho.pending:${cfg.url}:${session?.user?.id||''}`;
+let reportFilter='all',reportSearch='',reportSize='all',reportReady=false,reportSyncedAt=null,reportExporting=false,excelLoading=null;
 function toast(msg){$('#toast').textContent=msg;$('#toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').style.display='none',5000);}
 function sync(label,failed=false){$('#sync-state').textContent='● '+label;$('#sync-state').classList.toggle('failed',failed);}
 function errorText(e){if(e.message?.includes('VERSION_CONFLICT'))return 'Dữ liệu vừa thay đổi trên thiết bị khác. Đã tải bản mới; hãy kiểm tra số lượng rồi lưu lại.';if(e.message?.includes('Failed to fetch')||e.name==='AbortError')return 'Chưa nhận được xác nhận lưu. Kết nối mạng rồi bấm Làm mới để kiểm tra phiếu vừa gửi.';if(e.message?.includes('Invalid login'))return 'Email hoặc mật khẩu chưa đúng.';return e.message||'Không thực hiện được thao tác.';}
@@ -27,7 +28,7 @@ async function token(){
  if(session.expires_at*1000<Date.now()+60000){if(!refreshing)refreshing=request('/auth/v1/token?grant_type=refresh_token',{refresh_token:session.refresh_token}).then(s=>{saveSession(s);return s.access_token;}).finally(()=>refreshing=null);return refreshing;}return session.access_token;
 }
 async function rpc(name,args){try{return await request('/rest/v1/rpc/'+name,args,await token());}catch(e){if(e.status===401){localStorage.removeItem(sessionKey());session=null;$('#shell').hidden=true;$('#gate').hidden=false;throw Error('Phiên đăng nhập đã hết. Vui lòng đăng nhập lại.');}throw e;}}
-function accept(snapshot){if(snapshot.version>=revision){state=snapshot.data;revision=snapshot.version;}sync('Đã đồng bộ '+new Intl.DateTimeFormat('vi-VN',{hour:'2-digit',minute:'2-digit'}).format(new Date()));}
+function accept(snapshot){if(snapshot.version>=revision){state=snapshot.data;revision=snapshot.version;}reportReady=true;reportSyncedAt=new Date();sync('Đã đồng bộ '+new Intl.DateTimeFormat('vi-VN',{hour:'2-digit',minute:'2-digit'}).format(new Date()));}
 async function load(){if(demo)return;if(busy)return;sync(pending?'Đang kiểm tra phiếu':'Đang đồng bộ');try{if(pending){busy=true;const snap=await rpc('stock_save',pending);pending=null;localStorage.removeItem(pendingKey());accept(snap);$('#view-in').innerHTML='';$('#view-out').innerHTML='';$('#view-orders .order-form-wrap')?.remove();if($('#product-dialog').open)$('#product-dialog').close();toast('Đã kiểm tra và xác nhận phiếu.');}else accept(await rpc('stock_load',{}));render();}catch(e){if(e.message?.includes('VERSION_CONFLICT')){pending=null;localStorage.removeItem(pendingKey());accept(await rpc('stock_load',{}));render();}sync(pending?'Phiếu chưa xác nhận':'Chưa đồng bộ',true);toast(errorText(e));}finally{busy=false;}}
 async function commit(a){
  if(busy)throw Error('Đang lưu phiếu, vui lòng chờ.');if(pending)throw Error('Có phiếu chưa được xác nhận. Bấm Làm mới trước khi nhập phiếu khác.');
@@ -35,16 +36,17 @@ async function commit(a){
  try{if(demo){state=next;try{localStorage.setItem(demoKey(),JSON.stringify(state));sync('Bản thử trên thiết bị này');}catch{sync('Bản thử trong phiên này');}}
  else{pending={p_expected:revision,p_state:next,p_request:uuid()};localStorage.setItem(pendingKey(),JSON.stringify(pending));sync('Đang lưu phiếu');const snap=await rpc('stock_save',pending);pending=null;localStorage.removeItem(pendingKey());accept(snap);}render();}
  catch(e){if(e.status&&e.status<500){pending=null;localStorage.removeItem(pendingKey());if(e.message.includes('VERSION_CONFLICT'))accept(await rpc('stock_load',{}));render();}sync(pending?'Phiếu chưa xác nhận':'Chưa lưu',true);throw e;}
- finally{busy=false;$$('button[type="submit"]').forEach(b=>b.disabled=false);}
+ finally{busy=false;$$('button[type="submit"]').forEach(b=>b.disabled=false);if(tab==='reports')reportView();}
 }
 const product=id=>state.products.find(p=>p.id===id);
 function sample(){const s=C.blank(),colors=['R','G','LB','Y','WT','B'];colors.forEach((c,i)=>s.products.push({id:'demo-'+i,sku:'PU6x4-'+c,name:'Ống khí PU',color:C.color('PU6x4-'+c),unit:'Cuộn',opening:[12,10,5,8,6,4][i],min:0}));return s;}
-function startDemo(){demo=true;state=read(demoKey(),window.KHO_DEMO_SEED||sample());$('#gate').hidden=true;$('#shell').hidden=false;$('#demo-banner').hidden=false;$('#user-label').textContent='Bản dùng thử';sync('Bản thử trên thiết bị này');navigate('stock');}
-function enter(){demo=false;$('#gate').hidden=true;$('#shell').hidden=false;$('#demo-banner').hidden=true;$('#user-label').textContent=session.user.email;pending=read(pendingKey(),null);state=C.blank();revision=0;navigate('stock');load();}
-function navigate(t){tab=t;$$('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));$$('.view').forEach(v=>v.hidden=v.id!=='view-'+t);const labels={stock:['Tồn kho','Nắm số lượng thực tế và hàng còn có thể giao.'],in:['Nhập hàng','Ghi nhận hàng mới về bằng một phiếu nhập.'],out:['Xuất hàng','Xuất trực tiếp cho khách, theo số lượng khả dụng.'],orders:['Đơn chờ giao','Theo dõi đơn sắp tới, giữ hàng và giao hàng.'],history:['Lịch sử nhập xuất','Xem phiếu đã lưu, in phiếu xuất hoặc lưu PDF.']};$('#page-title').textContent=labels[t][0];$('#page-desc').textContent=labels[t][1];$('#add-product-btn').hidden=t!=='stock';$('#stock-actions').hidden=t!=='stock';render();}
+function startDemo(){demo=true;state=read(demoKey(),window.KHO_DEMO_SEED||sample());reportReady=true;reportSyncedAt=new Date();$('#gate').hidden=true;$('#shell').hidden=false;$('#demo-banner').hidden=false;$('#user-label').textContent='Bản dùng thử';sync('Bản thử trên thiết bị này');navigate('stock');}
+function enter(){demo=false;$('#gate').hidden=true;$('#shell').hidden=false;$('#demo-banner').hidden=true;$('#user-label').textContent=session.user.email;pending=read(pendingKey(),null);state=C.blank();revision=0;reportReady=false;reportSyncedAt=null;navigate('stock');load();}
+function navigate(t){tab=t;$$('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));$$('.view').forEach(v=>v.hidden=v.id!=='view-'+t);const labels={stock:['Tồn kho','Nắm số lượng thực tế và hàng còn có thể giao.'],in:['Nhập hàng','Ghi nhận hàng mới về bằng một phiếu nhập.'],out:['Xuất hàng','Xuất trực tiếp cho khách, theo số lượng khả dụng.'],orders:['Đơn chờ giao','Theo dõi đơn sắp tới, giữ hàng và giao hàng.'],history:['Lịch sử nhập xuất','Xem phiếu đã lưu, in phiếu xuất hoặc lưu PDF.'],reports:['Báo cáo tồn kho','Xem hàng hết, sắp hết và tải báo cáo Excel theo bộ lọc.']};$('#page-title').textContent=labels[t][0];$('#page-desc').textContent=labels[t][1];$('#add-product-btn').hidden=t!=='stock';$('#stock-actions').hidden=t!=='stock';render();}
 function render(){
  $('#order-count').textContent=state.orders.filter(o=>['draft','reserved'].includes(o.status)).length;
  if(tab==='stock')stockView();if(tab==='in'||tab==='out')movementForm(tab);if(tab==='orders')ordersView();if(tab==='history')historyView();
+ if(tab==='reports')reportView();
 }
 const stockSize=p=>p.sku.match(/^(PU\d+(?:\.\d+)?x\d+(?:\.\d+)?)-/i)?.[1]||'Khác';
 const foldText=v=>String(v).toLocaleLowerCase('vi').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
@@ -63,6 +65,55 @@ function stockView(){
  $('#stock-size').onchange=e=>{sizeFilter=e.target.value;stockView();};
  $$('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;stockView();});
  if(focusSearch){$('#stock-search').focus({preventScroll:true});$('#stock-search').setSelectionRange(cursor,cursor);}else if(focusSize)$('#stock-size').focus({preventScroll:true});else if(focusFilter)document.querySelector(`[data-filter="${focusFilter}"]`)?.focus({preventScroll:true});
+}
+function reportView(){
+ const view=$('#view-reports');
+ if(!reportReady){view.innerHTML='<div class="panel empty"><b>Chưa có số liệu báo cáo</b>Đang tải dữ liệu kho. Nếu chưa hiện, bấm ↻ Làm mới ở phía trên.</div>';return;}
+ const active=document.activeElement,focusSearch=active?.id==='report-search',cursor=focusSearch?active.selectionStart:null,focusSize=active?.id==='report-size',focusFilter=active?.dataset?.reportFilter;
+ const options=()=>({filter:reportFilter,search:reportSearch,size:reportSize,asOf:reportSyncedAt,version:revision,demo});
+ let report=KhoReports.prepare(state,options());
+ if(reportSize!=='all'&&!report.sizes.includes(reportSize)){reportSize='all';report=KhoReports.prepare(state,options());}
+ const cards=[['all','Toàn bộ tồn kho','Tất cả mã trong danh mục'],['zero','Hết khả dụng',`${report.counts.physicalZero} mã hết tồn thực tế`],['low','Sắp hết hàng','Còn trên 0 đến 2 đơn vị có thể giao']];
+ const summary=`<div class="report-summary" role="group" aria-label="Chọn báo cáo">${cards.map(([key,label,desc])=>`<button type="button" class="report-card ${key===reportFilter?'active':''} report-${key}" data-report-filter="${key}" aria-pressed="${key===reportFilter}"><span>${label}</span><b>${n(report.counts[key])}<small> mã</small></b><span class="report-card-hint">${desc}</span></button>`).join('')}</div>`;
+ const controls=`<div class="stock-panel-heading"><div><h2>${safe(report.label)}</h2><p>${demo?'Số liệu thử trên thiết bị này':`Đã đồng bộ: ${safe(report.timeLabel)}`}</p></div><button type="button" class="btn export-btn" id="export-report" ${!report.items.length||busy||pending||reportExporting?'disabled':''}>${reportExporting?'Đang tạo báo cáo…':'↓ Xuất Excel (.xlsx)'}</button></div><div class="toolbar"><div class="search-wrap"><span aria-hidden="true">⌕</span><input id="report-search" type="search" value="${safe(reportSearch)}" placeholder="Tìm mã hàng hoặc màu…" aria-label="Tìm trong báo cáo"></div><label class="size-control"><span>Kích cỡ</span><select id="report-size"><option value="all">Tất cả kích cỡ</option>${report.sizes.map(size=>`<option value="${safe(size)}" ${reportSize===size?'selected':''}>${safe(size)}</option>`).join('')}</select></label></div>`;
+ const row=p=>`<tr class="stock-row ${p.available<=0?'is-empty':p.available<=2?'is-low':''}"><td class="sku-cell"><b class="sku">${safe(p.sku)}</b><span class="item-name">${safe(p.name)} · ${safe(p.unit)}</span></td><td class="color-cell">${safe(p.color)}</td><td class="num balance-cell"><span class="qty-caption">Tồn thực tế</span><b>${n(p.balance)}</b></td><td class="num reserved-cell"><span class="qty-caption">Đã giữ</span><b>${n(p.reserved)}</b></td><td class="num available-cell"><span class="qty-caption">Khả dụng</span><b class="available-qty">${n(p.available)}</b></td><td class="report-status"><span class="badge ${p.available<=0?'red':p.available<=2?'warn':'neutral'}">${safe(KhoReports.status(p))}</span></td></tr>`;
+ const table=report.items.length?`<div class="table-scroll"><table class="stock-table report-table" aria-label="Báo cáo tồn kho"><thead><tr><th scope="col">Mã hàng / đơn vị</th><th scope="col">Màu</th><th scope="col" class="num">Tồn thực tế</th><th scope="col" class="num">Đã giữ</th><th scope="col" class="num">Khả dụng</th><th scope="col">Tình trạng</th></tr></thead><tbody>${report.items.map(row).join('')}</tbody></table></div>`:'<div class="empty"><b>Không có mã hàng phù hợp</b>Thử đổi loại báo cáo, kích cỡ hoặc từ khóa.</div>';
+ view.innerHTML=summary+`<div class="panel report-panel">${controls}<p class="report-rule"><b>Khả dụng = Tồn thực tế − Đã giữ.</b> Hàng còn trong kho nhưng đã giữ hết được ghi “Đã giữ hết”. WT = Trắng trong; W = Trắng đục.</p>${table}<div class="table-foot"><span>Đang xem <b>${report.items.length} / ${report.counts.all}</b> mã · Excel xuất đúng danh sách đang lọc.</span><span>${report.totals.map(t=>`Khả dụng: <b>${n(t.available)} ${safe(t.unit)}</b>`).join(' · ')}</span></div></div><p class="report-help">Chọn một ô báo cáo phía trên để đổi danh sách. Khi xuất Excel, ứng dụng kiểm tra dữ liệu mới nhất trước khi tạo file.</p>`;
+ $('#report-search').oninput=e=>{reportSearch=e.target.value;reportView();};
+ $('#report-size').onchange=e=>{reportSize=e.target.value;reportView();};
+ $$('[data-report-filter]').forEach(b=>b.onclick=()=>{reportFilter=b.dataset.reportFilter;reportView();});
+ $('#export-report').onclick=exportReport;
+ if(focusSearch){$('#report-search').focus({preventScroll:true});$('#report-search').setSelectionRange(cursor,cursor);}else if(focusSize)$('#report-size').focus({preventScroll:true});else if(focusFilter)document.querySelector(`[data-report-filter="${focusFilter}"]`)?.focus({preventScroll:true});
+}
+function excelLibrary(){
+ if(window.ExcelJS)return Promise.resolve(window.ExcelJS);
+ if(!excelLoading)excelLoading=new Promise((resolve,reject)=>{
+  const script=document.createElement('script');let settled=false;
+  const finish=error=>{if(settled)return;settled=true;clearTimeout(timer);if(error){script.remove();reject(error);}else if(window.ExcelJS)resolve(window.ExcelJS);else reject(Error('Chưa tải được bộ xuất Excel. Vui lòng thử lại.'));};
+  const timer=setTimeout(()=>finish(Error('Tải bộ xuất Excel quá lâu. Kiểm tra kết nối rồi thử lại.')),25000);
+  script.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';script.integrity='sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz';script.crossOrigin='anonymous';
+  script.onload=()=>finish();script.onerror=()=>finish(Error('Không tải được bộ xuất Excel. Kiểm tra kết nối rồi thử lại.'));document.head.append(script);
+ }).catch(error=>{excelLoading=null;throw error;});
+ return excelLoading;
+}
+async function exportReport(){
+ if(reportExporting||busy||pending){toast('Chờ phiếu đang lưu được xác nhận rồi xuất báo cáo.');return;}
+ const options={filter:reportFilter,search:reportSearch,size:reportSize},account=session?.user?.id,isDemo=demo;
+ reportExporting=true;if(tab==='reports')reportView();
+ try{
+  const ExcelJS=await excelLibrary();
+  if(demo!==isDemo||!isDemo&&session?.user?.id!==account)throw Error('Tài khoản đã thay đổi. Vui lòng mở lại báo cáo.');
+  if(busy||pending)throw Error('Có phiếu đang lưu. Chờ xác nhận rồi xuất lại báo cáo.');
+  if(!isDemo){const snapshot=await rpc('stock_load',{});if(demo!==isDemo||session?.user?.id!==account)throw Error('Tài khoản đã thay đổi. Vui lòng mở lại báo cáo.');accept(snapshot);}
+  if(busy||pending)throw Error('Có phiếu đang lưu. Chờ xác nhận rồi xuất lại báo cáo.');
+  const report=KhoReports.prepare(state,{...options,asOf:new Date(),version:revision,demo:isDemo});
+  const data=await KhoReports.workbook(report,ExcelJS).xlsx.writeBuffer();
+  if(demo!==isDemo||!isDemo&&session?.user?.id!==account)throw Error('Tài khoản đã thay đổi. Vui lòng mở lại báo cáo.');
+  const blob=new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=report.filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  toast(`Đã tạo báo cáo ${report.items.length} mã hàng. Kiểm tra mục tải xuống của trình duyệt.`);
+ }catch(error){toast('Chưa xuất được báo cáo: '+errorText(error));}
+ finally{reportExporting=false;if(tab==='reports')reportView();}
 }
 function itemOptions(){return '<option value="">Chọn mã hàng…</option>'+C.inventory(state).map(p=>`<option value="${safe(p.id)}">${safe(p.sku)} — ${n(p.available)} ${safe(p.unit)} khả dụng</option>`).join('');}
 function refreshOptions(form){form.querySelectorAll('.line-product').forEach(sel=>{if(sel===document.activeElement)return;const v=sel.value;sel.innerHTML=itemOptions();sel.value=v;});}

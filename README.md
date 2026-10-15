@@ -10,6 +10,7 @@ Kết nối kho trực tuyến đã được cấu hình sẵn; người dùng c
 
 - Đăng nhập cùng tài khoản trên các thiết bị để dùng chung kho.
 - **Tồn kho:** tìm mã, xem tồn thực tế, số đã giữ và số còn khả dụng.
+- **Báo cáo:** mở mục **Báo cáo** → chọn **Toàn bộ tồn kho / Hết khả dụng / Sắp hết hàng** → tìm mã, màu hoặc lọc kích cỡ → **Xuất Excel (.xlsx)**. File xuất đúng danh sách đang xem; có thời điểm, phạm vi lọc, mã/màu/đơn vị, tồn thực tế, đã giữ, khả dụng và tổng theo từng đơn vị. Khi xuất, kho thật được đọc lại trước khi tạo file; nếu mất kết nối sẽ báo lỗi để thử lại. Hết khả dụng gồm cả mã còn tồn nhưng đã giữ hết; sắp hết là còn trên 0 đến 2 đơn vị khả dụng. Xuất báo cáo không ghi phiếu hay trừ tồn.
 - **Nhập hàng / Xuất hàng:** chọn mã, điền số lượng và lưu phiếu.
 - **Phiếu xuất kho:** sau khi lưu xuất hàng, màn hình xem phiếu tự mở. Chọn **In / Lưu PDF**, chọn khổ **A4**; chọn **Save as PDF / Lưu dưới dạng PDF** trong cửa sổ in để tải PDF. Để in lại: **Lịch sử → Xem / In phiếu xuất**, hoặc mở đơn **Đã giao**. Số phiếu tự tạo ổn định theo ngày và mã giao dịch. Phiếu có mã hàng, tên/màu, đơn vị, số lượng và ba vị trí ký nhận.
 - **Đơn chờ giao:** kiểm tra đủ/thiếu, giữ hàng, giao hoặc hủy đơn.
@@ -28,6 +29,8 @@ Giao diện nằm ở thư mục gốc, không cần cài npm hoặc build.
 Các RPC công khai chạy với quyền người gọi; phần ghi dữ liệu có kiểm tra chủ kho nằm trong schema `camtech_private` không đưa ra Data API. Các bảng bật RLS, tài khoản trình duyệt không có quyền ghi trực tiếp.
 
 Một tài khoản tương ứng một kho. V1 dùng cùng tài khoản để chia sẻ kho giữa các thiết bị. Trang tải mới mỗi 15 giây khi đang mở và khi bấm làm mới.
+
+Xuất XLSX dùng ExcelJS 4.4.0, chỉ tải khi bấm xuất, từ jsDelivr với mã kiểm tra SRI cố định. Cần kết nối mạng để tải lần đầu. Không gửi dữ liệu kho đến CDN; file được tạo trong trình duyệt. Chỉ `stock_load` được gọi khi xuất báo cáo, không đổi schema hoặc quyền truy cập.
 
 ## Kiểm tra
 
