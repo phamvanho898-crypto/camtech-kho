@@ -11,6 +11,7 @@ Kết nối kho trực tuyến đã được cấu hình sẵn; người dùng c
 - Đăng nhập cùng tài khoản trên các thiết bị để dùng chung kho.
 - **Tồn kho:** tìm mã, xem tồn thực tế, số đã giữ và số còn khả dụng.
 - **Nhập hàng / Xuất hàng:** chọn mã, điền số lượng và lưu phiếu.
+- **Phiếu xuất kho:** sau khi lưu xuất hàng, màn hình xem phiếu tự mở. Chọn **In / Lưu PDF**, chọn khổ **A4**; chọn **Save as PDF / Lưu dưới dạng PDF** trong cửa sổ in để tải PDF. Để in lại: **Lịch sử → Xem / In phiếu xuất**, hoặc mở đơn **Đã giao**. Số phiếu tự tạo ổn định theo ngày và mã giao dịch. Phiếu có mã hàng, tên/màu, đơn vị, số lượng và ba vị trí ký nhận.
 - **Đơn chờ giao:** kiểm tra đủ/thiếu, giữ hàng, giao hoặc hủy đơn.
 - **WT = Trắng trong; W = Trắng đục.** Hai mã được quản lý riêng.
 - Bản thử trên trang đăng nhập dùng số liệu minh họa và chỉ lưu trên thiết bị đang mở.

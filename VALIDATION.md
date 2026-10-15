@@ -1,6 +1,6 @@
 # Kiểm tra triển khai CAMTECH — 15/10/2026
 
-- 17 bài kiểm tra JavaScript đạt (11 nghiệp vụ và 6 kiểm tra hiển thị/bộ lọc). Phần nghiệp vụ gồm: W/WT, nhập/xuất, giữ/hủy/giao, chặn tồn âm và phiên bản cũ.
+- 26 bài kiểm tra JavaScript đạt (11 nghiệp vụ, 6 hiển thị/bộ lọc, 9 phiếu xuất). Phần nghiệp vụ gồm: W/WT, nhập/xuất, giữ/hủy/giao, chặn tồn âm và phiên bản cũ.
 - 16 kiểm tra trực tiếp trên PostgreSQL/Supabase đạt, bằng vai trò `authenticated` và ngữ cảnh người dùng thử: đọc/lưu, đọc lại sau ghi, chống ghi trùng, từ chối phiên bản cũ, chặn xuất vượt tồn, chặn ghi trực tiếp, RLS với chủ kho khác, từ chối thiếu danh tính, giữ/giao đơn, chống giao trùng và bảo toàn lịch sử.
 - Mọi thay đổi của kiểm tra cơ sở dữ liệu được rollback; đã đối chiếu lại trạng thái sau kiểm tra.
 - Public RPC dùng `SECURITY INVOKER`; các hàm đặc quyền có kiểm tra `auth.uid()` nằm trong schema riêng, không đưa ra Data API. Không có secret/service_role key trong mã nguồn.
@@ -14,3 +14,9 @@
 Chữ nội dung chính 15–16 px, mã hàng 17–19 px, số tồn 23–26 px. Bảng nhóm theo kích cỡ, có bộ lọc kích cỡ và tìm màu không dấu. WT/W có nhãn và nền riêng, không chỉ dựa vào ô màu trắng. Có nút nhập/xuất ngay trên trang tồn kho. Dưới 720 px, mỗi mã chuyển thành thẻ với ba số Tồn kho / Đã giữ / Có thể giao; menu dưới dành cho màn hình nhỏ.
 
 6 kiểm tra render/bộ lọc đạt: không mất mã khi nhóm, tách W/WT, lọc kích cỡ, tìm màu không dấu, phân biệt sắp hết/hết, thoát HTML và giữ vị trí gõ khi tải lại. Đã kiểm tra ID, tài nguyên có phiên bản và cấu trúc CSS. Chưa kiểm tra bố cục bằng trình duyệt vì môi trường không có công cụ điều khiển trình duyệt được hỗ trợ.
+
+## Phiếu xuất kho
+
+Mẫu xem trước và CSS in A4 được tạo từ giao dịch xuất đã lưu, gồm xuất trực tiếp và giao từ đơn. Có nút in sau khi lưu, trong lịch sử và trên đơn đã giao. In lại chỉ đọc dữ liệu, không tạo giao dịch hoặc ghi cơ sở dữ liệu. Số phiếu suy ra ổn định từ ngày và mã giao dịch; V1 không cấp số tăng dần. Tổng số lượng tách theo từng đơn vị.
+
+9 kiểm tra đạt: mã/màu W/WT và lượng xuất, số phiếu ổn định, từ chối giao dịch chưa lưu/phiếu nhập, tham chiếu đơn đã giao, không đổi tồn khi xem/in lại, đơn vị và số thập phân, thoát HTML/bản thử, ngày/số lượng/mã hàng sai, đủ hàng hóa ở phiếu nhiều dòng. Đã kiểm tra cấu trúc vùng in riêng và quy tắc A4/ngắt trang. Chưa kiểm tra hộp thoại in/PDF và phân trang thực tế trên trình duyệt vì không có công cụ điều khiển trình duyệt được hỗ trợ.

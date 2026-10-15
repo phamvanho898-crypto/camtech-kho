@@ -296,3 +296,88 @@ dialog::backdrop { background:#0d203b80; }
   footer span { padding:0 6px; }
   dialog { padding:23px 19px; }
 }
+
+/* Saved outgoing slips: preview and A4 printing. */
+.history-slip { display:flex; align-items:center; flex-wrap:wrap; gap:10px 14px; margin-top:12px; }
+.history-slip>span { font-size:12px; color:#42566b; overflow-wrap:anywhere; }
+.history-slip .btn { min-height:44px; padding:9px 12px; font-size:14px; }
+.issue-dialog { width:calc(100% - 28px); max-width:1000px; max-height:calc(100dvh - 28px); padding:0; }
+.issue-dialog[open] { display:flex; flex-direction:column; }
+.issue-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; padding:20px 24px; border-bottom:1px solid var(--line); flex-shrink:0; }
+.issue-toolbar h2 { font-size:22px; }
+.issue-toolbar p { margin-top:4px; color:var(--muted); font-size:14px; }
+.issue-toolbar-actions { display:flex; gap:10px; }
+.issue-print-help { padding:12px 24px; margin:0; background:#edf4fb; border-bottom:1px solid var(--line); color:#2d4d6b; font-size:14px; flex-shrink:0; }
+.issue-preview-scroll { padding:24px; background:#dfe6ec; overflow:auto; min-height:0; }
+.issue-paper { width:210mm; max-width:100%; min-height:297mm; padding:12mm; margin:0 auto; background:#fff; color:#111; box-shadow:0 2px 14px #1a2f4420; font-family:'Times New Roman',Times,serif; font-size:12pt; line-height:1.45; }
+.issue-paper * { box-sizing:border-box; }
+.issue-company { display:flex; flex-direction:column; gap:3px; margin-bottom:22px; }
+.issue-company>b { font-size:13pt; }
+.issue-company>span { font-size:11pt; }
+.issue-title { text-align:center; margin-bottom:22px; }
+.issue-title h1 { font-size:23pt; font-weight:700; line-height:1.25; letter-spacing:0; margin:0 0 8px; }
+.issue-title p { line-height:1.5; font-size:12pt; margin:2px 0; }
+.issue-number { overflow-wrap:anywhere; }
+.issue-details { margin:0 0 20px; }
+.issue-details>div { margin-bottom:8px; }
+.issue-details dt,.issue-details dd { display:inline; margin:0; }
+.issue-details dt { font-weight:700; margin-right:5px; }
+.issue-details dd { white-space:pre-wrap; overflow-wrap:anywhere; }
+.issue-blank { overflow-wrap:anywhere; }
+.issue-items { width:100%; border-collapse:collapse; table-layout:fixed; font-family:inherit; font-size:11pt; margin-top:16px; }
+.issue-items th,.issue-items td { border:1px solid #333; padding:9px 8px; font-size:11pt; color:#111; background:#fff; white-space:normal; vertical-align:middle; overflow-wrap:anywhere; }
+.issue-items th { text-align:center; font-weight:700; background:#f2f2f2; }
+.issue-items th:nth-child(1) { width:7%; }
+.issue-items th:nth-child(2) { width:25%; }
+.issue-items th:nth-child(3) { width:38%; }
+.issue-items th:nth-child(4) { width:11%; }
+.issue-items th:nth-child(5) { width:19%; }
+.issue-items td:first-child,.issue-items td:nth-child(4) { text-align:center; }
+.issue-items .issue-qty { text-align:right; font-variant-numeric:tabular-nums; }
+.issue-sku { font-weight:700; }
+.issue-color { display:block; font-size:10.5pt; margin-top:2px; }
+.issue-total { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px 20px; border:1px solid #333; border-top:0; padding:12px 10px; }
+.issue-total span { font-size:12pt; }
+.issue-legend { font-size:10.5pt; margin:12px 0 22px; }
+.issue-signatures { display:table; width:100%; table-layout:fixed; margin-top:28px; }
+.issue-signatures>div { display:table-cell; text-align:center; vertical-align:top; padding:0 5px; }
+.issue-signatures b { display:block; font-size:12pt; }
+.issue-signatures span { display:block; font-size:10.5pt; font-style:italic; margin-top:4px; }
+.issue-sign-space { height:27mm; }
+.issue-demo { border:2px solid #a33; color:#922; font-family:Arial,sans-serif; font-weight:700; text-align:center; padding:8px; margin-bottom:18px; font-size:12pt; }
+#issue-print-root { display:none; }
+@media(max-width:720px) {
+  .issue-toolbar { padding:16px; gap:12px; }
+  .issue-toolbar-actions { width:100%; }
+  .issue-toolbar-actions .btn { flex:1; }
+  .issue-print-help { padding:12px 16px; font-size:13px; }
+  .issue-preview-scroll { padding:12px; }
+  .issue-paper { width:100%; min-height:0; padding:18px 12px; font-size:11pt; }
+  .issue-title h1 { font-size:20pt; }
+  .issue-title p { font-size:10.5pt; }
+  .issue-items th,.issue-items td { padding:7px 4px; font-size:9.5pt; }
+  .issue-color { font-size:9pt; }
+  .issue-signatures b { font-size:10pt; }
+  .issue-signatures span { font-size:9pt; }
+  .issue-total { font-size:11pt; }
+  .issue-sign-space { height:18mm; }
+}
+@page { size:A4 portrait; margin:12mm; }
+@media print {
+  body.issue-slip-open { margin:0!important; padding:0!important; background:#fff!important; }
+  body.issue-slip-open>* { display:none!important; }
+  body.issue-slip-open>#issue-print-root { display:block!important; }
+  body.issue-slip-open dialog::backdrop { display:none!important; }
+  #issue-print-root .issue-paper { width:auto; max-width:none; min-height:0; padding:0; margin:0; border:0; box-shadow:none; font-size:12pt; }
+  #issue-print-root .issue-company { margin-bottom:18px; }
+  #issue-print-root .issue-title h1 { font-size:23pt; }
+  #issue-print-root .issue-title p { font-size:12pt; }
+  #issue-print-root .issue-items th,#issue-print-root .issue-items td { padding:8px; font-size:11pt; }
+  #issue-print-root .issue-color { font-size:10.5pt; }
+  #issue-print-root .issue-items thead { display:table-header-group; }
+  #issue-print-root .issue-items tr { break-inside:avoid; page-break-inside:avoid; }
+  #issue-print-root .issue-total,#issue-print-root .issue-signatures { break-inside:avoid; page-break-inside:avoid; }
+  #issue-print-root .issue-signatures b { font-size:12pt; }
+  #issue-print-root .issue-signatures span { font-size:10.5pt; }
+  #issue-print-root .issue-sign-space { height:27mm; }
+}
