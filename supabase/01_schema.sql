@@ -1,6 +1,10 @@
 -- CAMTECH Kho V1. Run once in a dedicated Supabase project's SQL Editor.
 -- No changes to other applications' tables or authentication configuration.
 begin;
+create schema if not exists camtech_private;
+revoke all on schema camtech_private from public,anon;
+grant usage on schema camtech_private to authenticated;
+
 create table if not exists public.stock_workspaces (
  owner_id uuid primary key references auth.users(id) on delete cascade,
  version bigint not null default 0,
@@ -17,7 +21,9 @@ alter table public.stock_workspaces enable row level security;
 alter table public.stock_requests enable row level security;
 drop policy if exists stock_owner_read on public.stock_workspaces;
 create policy stock_owner_read on public.stock_workspaces for select to authenticated using ((select auth.uid())=owner_id);
-revoke all on public.stock_workspaces,public.stock_requests from anon,authenticated;
+drop policy if exists stock_receipts_internal_only on public.stock_requests;
+create policy stock_receipts_internal_only on public.stock_requests for all to authenticated using (false) with check (false);
+revoke all on public.stock_workspaces,public.stock_requests from public,anon,authenticated;
 grant select on public.stock_workspaces to authenticated;
 
 create or replace function public.stock_validate(s jsonb, previous jsonb)
@@ -87,7 +93,7 @@ begin
 end;
 $$;
 
-create or replace function public.stock_load()
+create or replace function camtech_private.stock_load()
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare u uuid:=auth.uid();r public.stock_workspaces%rowtype;
 begin
@@ -98,7 +104,7 @@ begin
 end;
 $$;
 
-create or replace function public.stock_save(p_expected bigint,p_state jsonb,p_request uuid)
+create or replace function camtech_private.stock_save(p_expected bigint,p_state jsonb,p_request uuid)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare u uuid:=auth.uid();r public.stock_workspaces%rowtype;
 begin
@@ -115,6 +121,20 @@ begin
  return jsonb_build_object('version',r.version,'data',r.data);
 end;
 $$;
+-- Exposed RPCs run as the caller; privileged routines stay in an unexposed schema.
+-- The private routines still check auth.uid() and constrain all reads/writes by owner.
+create or replace function public.stock_load()
+returns jsonb language sql security invoker set search_path='' as $$
+ select camtech_private.stock_load();
+$$;
+create or replace function public.stock_save(p_expected bigint,p_state jsonb,p_request uuid)
+returns jsonb language sql security invoker set search_path='' as $$
+ select camtech_private.stock_save(p_expected,p_state,p_request);
+$$;
+revoke execute on function camtech_private.stock_load() from public,anon;
+revoke execute on function camtech_private.stock_save(bigint,jsonb,uuid) from public,anon;
+grant execute on function camtech_private.stock_load() to authenticated;
+grant execute on function camtech_private.stock_save(bigint,jsonb,uuid) to authenticated;
 revoke execute on function public.stock_validate(jsonb,jsonb) from public,anon,authenticated;
 revoke execute on function public.stock_load() from public,anon;
 revoke execute on function public.stock_save(bigint,jsonb,uuid) from public,anon;

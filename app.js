@@ -7,7 +7,8 @@ const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',yea
 const uuid=()=>crypto.randomUUID?crypto.randomUUID():([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
 const demoKey=()=>window.KHO_DEMO_SEED?'kho.demo.camtech-241015.v1':'kho.demo.v1';
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
-let cfg=Object.assign({},window.KHO_CONFIG||{},read('kho.connection.v1',{})),session=null,state=C.blank(),revision=0,demo=false,tab='stock',busy=false,search='',filter='all',refreshing=null,confirmFn=null,pending=null;
+const bundledConfig=window.KHO_CONFIG||{},hasBundledConfig=Boolean(bundledConfig.url&&bundledConfig.publishableKey);
+let cfg=hasBundledConfig?{...bundledConfig}:read('kho.connection.v1',{}),session=null,state=C.blank(),revision=0,demo=false,tab='stock',busy=false,search='',filter='all',refreshing=null,confirmFn=null,pending=null;
 const sessionKey=()=>`kho.session:${cfg.url}`;
 const pendingKey=()=>`kho.pending:${cfg.url}:${session?.user?.id||''}`;
 function toast(msg){$('#toast').textContent=msg;$('#toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').style.display='none',5000);}
@@ -91,6 +92,7 @@ $('#exit-demo').onclick=()=>{demo=false;$('#shell').hidden=true;$('#gate').hidde
 $('#config-form').onsubmit=e=>{e.preventDefault();try{cfg=validateCfg($('#project-url').value.trim(),$('#project-key').value.trim());localStorage.setItem('kho.connection.v1',JSON.stringify(cfg));$('#connection-details').open=false;$('#connection-help').textContent='Đã lưu kết nối. Dùng tài khoản kho của anh để đăng nhập.';$('#gate-error').textContent='';}catch(err){$('#gate-error').textContent=errorText(err);}};
 $('#login-form').onsubmit=async e=>{e.preventDefault();const btn=e.target.querySelector('button');btn.disabled=true;$('#gate-error').textContent='';try{cfg=validateCfg(cfg.url||'',cfg.publishableKey||'');const s=await request('/auth/v1/token?grant_type=password',{email:$('#email').value.trim(),password:$('#password').value});saveSession(s);$('#password').value='';enter();}catch(err){$('#gate-error').textContent=errorText(err);}finally{btn.disabled=false;}};
 $('#project-url').value=cfg.url||'';$('#project-key').value=cfg.publishableKey||'';
+$('#connection-details').hidden=hasBundledConfig;
 $('#connection-help').textContent=cfg.url?'Đã có kết nối kho. Đăng nhập để đồng bộ.':'Chưa kết nối kho trực tuyến. Anh có thể xem thử giao diện trước.';
 session=read(sessionKey(),null);if(window.KHO_AUTO_DEMO)startDemo();else if(session)enter();
 $('#account-btn').onclick=()=>{$('#account-email').textContent=demo?'Bản dùng thử trên thiết bị này':session?.user?.email||'';$('#account-dialog').showModal();};
