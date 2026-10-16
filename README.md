@@ -9,6 +9,7 @@ Kết nối kho trực tuyến đã được cấu hình sẵn; người dùng c
 ## Sử dụng
 
 - Đăng nhập cùng tài khoản trên các thiết bị để dùng chung kho.
+- Nếu phiên đăng nhập cũ hết hiệu lực, app trở về màn hình đăng nhập và giữ email để đăng nhập lại. Phiếu chưa được xác nhận vẫn được giữ trên thiết bị và chỉ kiểm tra lại khi vào đúng tài khoản. Khi chưa tải được kho, app hiển thị lỗi và nút **Thử tải lại**, không hiển thị tồn 0 hay hướng dẫn nhập lại dữ liệu. Nếu đã tải được một lần rồi mất mạng, số liệu cũ vẫn được giữ kèm thông báo chưa đồng bộ.
 - **Tồn kho:** tìm mã, xem tồn thực tế, số đã giữ và số còn khả dụng.
 - **Báo cáo:** mở mục **Báo cáo** → chọn **Toàn bộ tồn kho / Hết khả dụng / Sắp hết hàng** → tìm mã, màu hoặc lọc kích cỡ → **Xuất Excel (.xlsx)**. File xuất đúng danh sách đang xem; có thời điểm, phạm vi lọc, mã/màu/đơn vị, tồn thực tế, đã giữ, khả dụng và tổng theo từng đơn vị. Khi xuất, kho thật được đọc lại trước khi tạo file; nếu mất kết nối sẽ báo lỗi để thử lại. Hết khả dụng gồm cả mã còn tồn nhưng đã giữ hết; sắp hết là còn trên 0 đến 2 đơn vị khả dụng. Xuất báo cáo không ghi phiếu hay trừ tồn.
 - **Nhập hàng / Xuất hàng:** chọn mã, điền số lượng và lưu phiếu.

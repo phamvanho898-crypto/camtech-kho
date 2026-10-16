@@ -68,6 +68,8 @@ main { max-width:1600px; margin:auto; padding:28px; }
 .stat.focus { background:#e9f6ee; border:2px solid #378b61; padding:19px; }
 .stat.focus .number,.stat.focus .label { color:#0d5638; }
 .panel { background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+.load-notice { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px 18px; margin-bottom:20px; padding:16px 18px; border:1px solid #d5ad61; border-radius:9px; background:#fff2d8; color:#744500; font-size:15px; }
+.load-notice>span { flex:1 1 240px; overflow-wrap:anywhere; }
 .stock-panel-heading { padding:22px 22px 18px; display:flex; align-items:center; justify-content:space-between; gap:16px; border-bottom:1px solid var(--line); }
 .stock-panel-heading p { color:var(--muted); font-size:14px; margin-top:5px; }
 .white-legend { display:flex; flex-wrap:wrap; gap:10px 18px; font-size:14px; }

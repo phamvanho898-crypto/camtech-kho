@@ -11,7 +11,7 @@ const bundledConfig=window.KHO_CONFIG||{},hasBundledConfig=Boolean(bundledConfig
 let cfg=hasBundledConfig?{...bundledConfig}:read('kho.connection.v1',{}),session=null,state=C.blank(),revision=0,demo=false,tab='stock',busy=false,search='',filter='all',sizeFilter='all',refreshing=null,confirmFn=null,pending=null;
 const sessionKey=()=>`kho.session:${cfg.url}`;
 const pendingKey=()=>`kho.pending:${cfg.url}:${session?.user?.id||''}`;
-let reportFilter='all',reportSearch='',reportSize='all',reportReady=false,reportSyncedAt=null,reportExporting=false,excelLoading=null;
+let reportFilter='all',reportSearch='',reportSize='all',reportReady=false,reportSyncedAt=null,reportExporting=false,excelLoading=null,loading=false,loadError='';
 function toast(msg){$('#toast').textContent=msg;$('#toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').style.display='none',5000);}
 function sync(label,failed=false){$('#sync-state').textContent='● '+label;$('#sync-state').classList.toggle('failed',failed);}
 function errorText(e){if(e.message?.includes('VERSION_CONFLICT'))return 'Dữ liệu vừa thay đổi trên thiết bị khác. Đã tải bản mới; hãy kiểm tra số lượng rồi lưu lại.';if(e.message?.includes('Failed to fetch')||e.name==='AbortError')return 'Chưa nhận được xác nhận lưu. Kết nối mạng rồi bấm Làm mới để kiểm tra phiếu vừa gửi.';if(e.message?.includes('Invalid login'))return 'Email hoặc mật khẩu chưa đúng.';return e.message||'Không thực hiện được thao tác.';}
@@ -20,17 +20,42 @@ async function request(path,body,token){
  const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),20000);let response;
  try{response=await fetch(cfg.url+path,{method:body===undefined?'GET':'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:body===undefined?undefined:JSON.stringify(body),signal:ac.signal});}finally{clearTimeout(timer);}
  const txt=await response.text();let data;try{data=JSON.parse(txt);}catch{throw Error('Máy chủ trả về dữ liệu không hợp lệ.');}
- if(!response.ok){const e=Error(data.message||data.msg||data.error_description||data.error||'Lỗi kết nối dữ liệu.');e.status=response.status;throw e;}return data;
+ if(!response.ok){const e=Error(data.message||data.msg||data.error_description||data.error||'Lỗi kết nối dữ liệu.');e.status=response.status;e.code=data.error_code||data.code||'';throw e;}return data;
 }
 function saveSession(s){if(!s.expires_at)s.expires_at=Math.floor(Date.now()/1000)+Number(s.expires_in||3600);session=s;localStorage.setItem(sessionKey(),JSON.stringify(s));}
-async function token(){
- if(!session)throw Error('Vui lòng đăng nhập.');
- if(session.expires_at*1000<Date.now()+60000){if(!refreshing)refreshing=request('/auth/v1/token?grant_type=refresh_token',{refresh_token:session.refresh_token}).then(s=>{saveSession(s);return s.access_token;}).finally(()=>refreshing=null);return refreshing;}return session.access_token;
+function requireLogin(message='Phiên đăng nhập đã hết. Vui lòng đăng nhập lại để tải kho.'){
+ const email=session?.user?.email||'';localStorage.removeItem(sessionKey());session=null;pending=null;state=C.blank();revision=0;reportReady=false;reportSyncedAt=null;loadError='';
+ $('#shell').hidden=true;$('#gate').hidden=false;$('#gate-error').textContent=message;if(email)$('#email').value=email;
+ $$('dialog[open]').forEach(d=>d.close());
+ const error=Error(message);error.code='KHO_SIGN_IN_REQUIRED';return error;
 }
-async function rpc(name,args){try{return await request('/rest/v1/rpc/'+name,args,await token());}catch(e){if(e.status===401){localStorage.removeItem(sessionKey());session=null;$('#shell').hidden=true;$('#gate').hidden=false;throw Error('Phiên đăng nhập đã hết. Vui lòng đăng nhập lại.');}throw e;}}
+async function token(){
+ if(!session)throw requireLogin();
+ if(!session.access_token||!Number.isFinite(Number(session.expires_at))||session.expires_at*1000<Date.now()+60000){
+  if(!session.refresh_token)throw requireLogin();
+  if(!refreshing){const original=session;refreshing=request('/auth/v1/token?grant_type=refresh_token',{refresh_token:original.refresh_token}).then(s=>{if(session!==original)throw Error('Tài khoản đã thay đổi. Vui lòng tải lại kho.');saveSession(s);return s.access_token;}).catch(e=>{
+   if(session===original&&(e.status===401||e.status===400&&(['refresh_token_not_found','refresh_token_already_used','session_expired','session_not_found','invalid_grant'].includes(e.code)||/invalid refresh token|refresh token.*(not found|already used)/i.test(e.message))))throw requireLogin();
+   throw e;
+  }).finally(()=>refreshing=null);}return refreshing;
+ }return session.access_token;
+}
+async function rpc(name,args){const owner=session?.user?.id;try{const result=await request('/rest/v1/rpc/'+name,args,await token());if(!session||session.user.id!==owner)throw Error('Tài khoản đã thay đổi. Vui lòng tải lại kho.');return result;}catch(e){if(e.status===401&&session?.user?.id===owner)throw requireLogin();throw e;}}
 function accept(snapshot){if(snapshot.version>=revision){state=snapshot.data;revision=snapshot.version;}reportReady=true;reportSyncedAt=new Date();sync('Đã đồng bộ '+new Intl.DateTimeFormat('vi-VN',{hour:'2-digit',minute:'2-digit'}).format(new Date()));}
-async function load(){if(demo)return;if(busy)return;sync(pending?'Đang kiểm tra phiếu':'Đang đồng bộ');try{if(pending){busy=true;const snap=await rpc('stock_save',pending);pending=null;localStorage.removeItem(pendingKey());accept(snap);$('#view-in').innerHTML='';$('#view-out').innerHTML='';$('#view-orders .order-form-wrap')?.remove();if($('#product-dialog').open)$('#product-dialog').close();toast('Đã kiểm tra và xác nhận phiếu.');}else accept(await rpc('stock_load',{}));render();}catch(e){if(e.message?.includes('VERSION_CONFLICT')){pending=null;localStorage.removeItem(pendingKey());accept(await rpc('stock_load',{}));render();}sync(pending?'Phiếu chưa xác nhận':'Chưa đồng bộ',true);toast(errorText(e));}finally{busy=false;}}
+async function load(){
+ if(demo||busy||loading||!session)return;loading=true;loadError='';sync(pending?'Đang kiểm tra phiếu':'Đang đồng bộ');render();
+ try{
+  if(pending){busy=true;const snap=await rpc('stock_save',pending);pending=null;localStorage.removeItem(pendingKey());accept(snap);$('#view-in').innerHTML='';$('#view-out').innerHTML='';$('#view-orders .order-form-wrap')?.remove();if($('#product-dialog').open)$('#product-dialog').close();toast('Đã kiểm tra và xác nhận phiếu.');}
+  else accept(await rpc('stock_load',{}));
+ }catch(e){
+  if(e.message?.includes('VERSION_CONFLICT')){
+   pending=null;localStorage.removeItem(pendingKey());
+   try{accept(await rpc('stock_load',{}));}catch(reloadError){loadError=errorText(reloadError);}
+  }else loadError=e.name==='AbortError'||/Failed to fetch|fetch failed/i.test(e.message)?'Chưa kết nối được kho. Kiểm tra mạng rồi bấm Thử tải lại.':errorText(e);
+  sync(pending?'Phiếu chưa xác nhận':'Chưa đồng bộ',true);
+ }finally{busy=false;loading=false;if(session){render();}else loadError='';}
+}
 async function commit(a){
+ if(!demo&&!reportReady)throw Error('Chờ tải dữ liệu kho thành công trước khi lưu phiếu.');
  if(busy)throw Error('Đang lưu phiếu, vui lòng chờ.');if(pending)throw Error('Có phiếu chưa được xác nhận. Bấm Làm mới trước khi nhập phiếu khác.');
  const next=C.apply(state,a);busy=true;$$('button[type="submit"]').forEach(b=>b.disabled=true);
  try{if(demo){state=next;try{localStorage.setItem(demoKey(),JSON.stringify(state));sync('Bản thử trên thiết bị này');}catch{sync('Bản thử trong phiên này');}}
@@ -40,10 +65,11 @@ async function commit(a){
 }
 const product=id=>state.products.find(p=>p.id===id);
 function sample(){const s=C.blank(),colors=['R','G','LB','Y','WT','B'];colors.forEach((c,i)=>s.products.push({id:'demo-'+i,sku:'PU6x4-'+c,name:'Ống khí PU',color:C.color('PU6x4-'+c),unit:'Cuộn',opening:[12,10,5,8,6,4][i],min:0}));return s;}
-function startDemo(){demo=true;state=read(demoKey(),window.KHO_DEMO_SEED||sample());reportReady=true;reportSyncedAt=new Date();$('#gate').hidden=true;$('#shell').hidden=false;$('#demo-banner').hidden=false;$('#user-label').textContent='Bản dùng thử';sync('Bản thử trên thiết bị này');navigate('stock');}
-function enter(){demo=false;$('#gate').hidden=true;$('#shell').hidden=false;$('#demo-banner').hidden=true;$('#user-label').textContent=session.user.email;pending=read(pendingKey(),null);state=C.blank();revision=0;reportReady=false;reportSyncedAt=null;navigate('stock');load();}
+function startDemo(){demo=true;loadError='';state=read(demoKey(),window.KHO_DEMO_SEED||sample());reportReady=true;reportSyncedAt=new Date();$('#gate').hidden=true;$('#shell').hidden=false;$('#demo-banner').hidden=false;$('#user-label').textContent='Bản dùng thử';sync('Bản thử trên thiết bị này');navigate('stock');}
+function enter(){demo=false;loadError='';search='';filter='all';sizeFilter='all';$('#gate').hidden=true;$('#shell').hidden=false;$('#demo-banner').hidden=true;$('#user-label').textContent=session.user.email;pending=read(pendingKey(),null);state=C.blank();revision=0;reportReady=false;reportSyncedAt=null;navigate('stock');load();}
 function navigate(t){tab=t;$$('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));$$('.view').forEach(v=>v.hidden=v.id!=='view-'+t);const labels={stock:['Tồn kho','Nắm số lượng thực tế và hàng còn có thể giao.'],in:['Nhập hàng','Ghi nhận hàng mới về bằng một phiếu nhập.'],out:['Xuất hàng','Xuất trực tiếp cho khách, theo số lượng khả dụng.'],orders:['Đơn chờ giao','Theo dõi đơn sắp tới, giữ hàng và giao hàng.'],history:['Lịch sử nhập xuất','Xem phiếu đã lưu, in phiếu xuất hoặc lưu PDF.'],reports:['Báo cáo tồn kho','Xem hàng hết, sắp hết và tải báo cáo Excel theo bộ lọc.']};$('#page-title').textContent=labels[t][0];$('#page-desc').textContent=labels[t][1];$('#add-product-btn').hidden=t!=='stock';$('#stock-actions').hidden=t!=='stock';render();}
 function render(){
+ const notice=$('#load-notice');if(notice){notice.hidden=!loadError;$('#load-error').textContent=loadError+(reportReady?' Đang hiển thị số liệu đã tải lần trước.':'');}
  $('#order-count').textContent=state.orders.filter(o=>['draft','reserved'].includes(o.status)).length;
  if(tab==='stock')stockView();if(tab==='in'||tab==='out')movementForm(tab);if(tab==='orders')ordersView();if(tab==='history')historyView();
  if(tab==='reports')reportView();
@@ -51,6 +77,7 @@ function render(){
 const stockSize=p=>p.sku.match(/^(PU\d+(?:\.\d+)?x\d+(?:\.\d+)?)-/i)?.[1]||'Khác';
 const foldText=v=>String(v).toLocaleLowerCase('vi').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
 function stockView(){
+ if(!demo&&!reportReady){$('#view-stock').innerHTML=`<div class="panel empty"><b>${loadError?'Chưa tải được dữ liệu kho':'Đang tải dữ liệu kho…'}</b>${loadError?'Dùng nút Thử tải lại phía trên. Chưa thể xác định tồn kho lúc này.':'Vui lòng chờ kết nối và xác nhận số liệu.'}</div>`;return;}
  const active=document.activeElement,focusSearch=active?.id==='stock-search',cursor=focusSearch?active.selectionStart:null,focusSize=active?.id==='stock-size',focusFilter=active?.dataset?.filter;
  const rows=C.inventory(state),units=[...new Set(rows.map(p=>p.unit))],sameUnit=units.length===1,tot=key=>sameUnit?n(rows.reduce((sum,r)=>sum+r[key],0)):'—',unit=sameUnit?safe(units[0]):'Theo từng mã';
  const sizes=[...new Set(rows.map(stockSize))];if(!sizes.includes(sizeFilter))sizeFilter='all';
@@ -166,6 +193,7 @@ $('#product-form').onsubmit=async e=>{e.preventDefault();const f=e.target;try{aw
 $$('nav button').forEach(b=>b.onclick=()=>navigate(b.dataset.tab));
 $$('[data-navigate]').forEach(b=>b.onclick=()=>navigate(b.dataset.navigate));
 $('#refresh-btn').onclick=()=>{if(demo){toast('Bản thử chỉ lưu trên thiết bị này.');return;}load();};
+$('#retry-load').onclick=()=>load();
 $('#backup-btn').onclick=()=>{const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),version:revision,data:state},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='CAMTECH-kho-'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('#logout-btn').onclick=async()=>{if(!demo&&pending){toast('Bấm Làm mới để xác nhận phiếu đang gửi trước khi đăng xuất.');return;}if(!demo){try{await request('/auth/v1/logout',{},await token());}catch{}}localStorage.removeItem(sessionKey());session=null;state=C.blank();$('#shell').hidden=true;$('#gate').hidden=false;};
 $('#exit-demo').onclick=()=>{demo=false;$('#shell').hidden=true;$('#gate').hidden=false;};$('#demo-btn').onclick=startDemo;

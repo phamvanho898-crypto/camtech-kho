@@ -7,7 +7,7 @@ function setup(){
  const elements=new Map();
  const element=selector=>{if(!elements.has(selector))elements.set(selector,{innerHTML:'',focus(){},setSelectionRange(){}});return elements.get(selector);};
  const context={
-  C,Intl,search:'',filter:'all',sizeFilter:'all',document:{activeElement:null,querySelector:element},
+  C,Intl,search:'',filter:'all',sizeFilter:'all',demo:true,reportReady:true,loadError:'',document:{activeElement:null,querySelector:element},
   $:element,$$:()=>[],
   state:{products:[
    {id:'w',sku:'PU6x4-W',name:'Ống khí PU',color:'Trắng đục',unit:'Cuộn',opening:0},
@@ -53,4 +53,9 @@ test('Không tìm thấy có hướng dẫn; cập nhật giữ vị trí nhập
  v.context.search='nothing';const html=v.render();
  assert.equal(rowCount(html),0);assert.match(html,/Không có mã hàng phù hợp/);
  assert.deepEqual(selection,[3,3]);
+});
+test('Chưa tải kho hoặc tải lỗi không hiện số 0 hay lời nhắc thêm mã',()=>{
+ const v=setup();v.context.demo=false;v.context.reportReady=false;
+ let html=v.render();assert.match(html,/Đang tải dữ liệu kho/);assert.doesNotMatch(html,/Kho hàng chưa có mã|Thêm mã|class="stats"/);
+ v.context.loadError='Mất kết nối';html=v.render();assert.match(html,/Chưa tải được dữ liệu kho/);assert.doesNotMatch(html,/Kho hàng chưa có mã|class="stats"/);
 });
