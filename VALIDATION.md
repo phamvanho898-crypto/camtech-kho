@@ -1,6 +1,6 @@
 # Kiểm tra triển khai CAMTECH — 15/10/2026
 
-- 44 bài kiểm tra JavaScript đạt (11 nghiệp vụ, 7 hiển thị/bộ lọc, 9 phiếu xuất, 9 báo cáo, 8 khôi phục tải/phiên). Phần nghiệp vụ gồm: W/WT, nhập/xuất, giữ/hủy/giao, chặn tồn âm và phiên bản cũ.
+- 45 bài kiểm tra JavaScript đạt (11 nghiệp vụ, 7 hiển thị/bộ lọc, 9 phiếu xuất, 9 báo cáo, 9 khôi phục tải/phiên). Phần nghiệp vụ gồm: W/WT, nhập/xuất, giữ/hủy/giao, chặn tồn âm và phiên bản cũ.
 - 16 kiểm tra trực tiếp trên PostgreSQL/Supabase đạt, bằng vai trò `authenticated` và ngữ cảnh người dùng thử: đọc/lưu, đọc lại sau ghi, chống ghi trùng, từ chối phiên bản cũ, chặn xuất vượt tồn, chặn ghi trực tiếp, RLS với chủ kho khác, từ chối thiếu danh tính, giữ/giao đơn, chống giao trùng và bảo toàn lịch sử.
 - Mọi thay đổi của kiểm tra cơ sở dữ liệu được rollback; đã đối chiếu lại trạng thái sau kiểm tra.
 - Public RPC dùng `SECURITY INVOKER`; các hàm đặc quyền có kiểm tra `auth.uid()` nằm trong schema riêng, không đưa ra Data API. Không có secret/service_role key trong mã nguồn.
@@ -33,4 +33,4 @@ Sau triển khai, đã kiểm tra trực tiếp trên trình duyệt bằng bả
 
 Xác nhận lỗi trong mã cũ: làm mới phiên bị Auth từ chối bằng HTTP 400 không được đưa về đăng nhập; trạng thái khởi tạo rỗng tiếp tục hiển thị như kho chưa có mã hàng. Bản sửa xử lý các mã lỗi refresh token không hợp lệ, giữ thông báo đăng nhập rõ ràng và không xóa phiếu chưa xác nhận khỏi thiết bị. Lỗi mạng giữ lại phiên và số liệu đã xác nhận, hiển thị thông báo cố định kèm nút thử lại. Chưa tải kho thành công thì không hiện tồn 0 và không cho lưu phiếu. Phản hồi từ phiên/tài khoản cũ không ghi đè dữ liệu tài khoản mới; chặn đọc trùng và xử lý lỗi đọc lại sau xung đột phiên bản.
 
-9 kiểm tra mới đạt: 8 kiểm tra luồng đồng bộ/phiên và 1 kiểm tra giao diện chưa tải/lỗi tải. Tình huống refresh bị từ chối và phục hồi đọc được chạy bằng dữ liệu mô phỏng; không gọi đăng nhập bằng mật khẩu thật, không ghi vào cơ sở dữ liệu. Endpoint Auth health phản hồi HTTP 200. Kết nối quản trị Supabase trong phiên kiểm tra không được cấp quyền đọc dự án; chưa xác nhận trạng thái/số liệu kho thật hiện tại và không thực hiện khôi phục dữ liệu từ bản cũ.
+10 kiểm tra mới đạt: 9 kiểm tra luồng đồng bộ/phiên (gồm khởi động với HTML cũ còn trong cache) và 1 kiểm tra giao diện chưa tải/lỗi tải. Tình huống refresh bị từ chối và phục hồi đọc được chạy bằng dữ liệu mô phỏng; không gọi đăng nhập bằng mật khẩu thật, không ghi vào cơ sở dữ liệu. Endpoint Auth health phản hồi HTTP 200. Kết nối quản trị Supabase trong phiên kiểm tra không được cấp quyền đọc dự án; chưa xác nhận trạng thái/số liệu kho thật hiện tại và không thực hiện khôi phục dữ liệu từ bản cũ.

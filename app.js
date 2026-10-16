@@ -193,7 +193,7 @@ $('#product-form').onsubmit=async e=>{e.preventDefault();const f=e.target;try{aw
 $$('nav button').forEach(b=>b.onclick=()=>navigate(b.dataset.tab));
 $$('[data-navigate]').forEach(b=>b.onclick=()=>navigate(b.dataset.navigate));
 $('#refresh-btn').onclick=()=>{if(demo){toast('Bản thử chỉ lưu trên thiết bị này.');return;}load();};
-$('#retry-load').onclick=()=>load();
+$('#retry-load')?.addEventListener('click',()=>load());
 $('#backup-btn').onclick=()=>{const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),version:revision,data:state},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='CAMTECH-kho-'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('#logout-btn').onclick=async()=>{if(!demo&&pending){toast('Bấm Làm mới để xác nhận phiếu đang gửi trước khi đăng xuất.');return;}if(!demo){try{await request('/auth/v1/logout',{},await token());}catch{}}localStorage.removeItem(sessionKey());session=null;state=C.blank();$('#shell').hidden=true;$('#gate').hidden=false;};
 $('#exit-demo').onclick=()=>{demo=false;$('#shell').hidden=true;$('#gate').hidden=false;};$('#demo-btn').onclick=startDemo;

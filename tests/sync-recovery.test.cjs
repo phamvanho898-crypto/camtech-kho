@@ -65,3 +65,9 @@ test('Hai lần tải đồng thời chỉ gửi một yêu cầu đọc',async(
  const first=c.load();await c.load();await Promise.resolve();complete(snapshot());await first;
  assert.deepEqual(calls,['/rest/v1/rpc/stock_load']);assert.equal(c.revision,7);
 });
+test('HTML còn trong cache chưa có nút thử lại không làm dừng khởi động app',()=>{
+ const nodes=new Map(),element=selector=>{if(selector==='#retry-load')return null;if(!nodes.has(selector))nodes.set(selector,{addEventListener(){},classList:{toggle(){}},value:'',textContent:'',hidden:false});return nodes.get(selector);};
+ const context={KhoCore:C,document:{querySelector:element,querySelectorAll:()=>[],title:'CAMTECH',addEventListener(){}},window:{addEventListener(){}},localStorage:{getItem(){return null;}},setInterval(){},Intl};
+ vm.createContext(context);assert.doesNotThrow(()=>vm.runInContext(source,context));
+ assert.equal(typeof element('#login-form').onsubmit,'function');
+});
